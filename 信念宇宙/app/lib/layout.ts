@@ -5,7 +5,7 @@ import {
   type TemporalLayer,
 } from "./belief-types";
 
-const DOMAIN_ORDER: readonly Domain[] = [
+export const DOMAIN_ORDER: readonly Domain[] = [
   "self",
   "relationship",
   "life",
@@ -18,14 +18,26 @@ const DOMAIN_ORDER: readonly Domain[] = [
   "meaning",
 ];
 
-const HEIGHT_BY_TIME: Record<TemporalLayer, number> = {
+export const HEIGHT_BY_TIME: Record<TemporalLayer, number> = {
   past: -6,
   current: 0,
   emerging: 6,
 };
 
+export const MAX_DEPTH = 4;
+
 const TWO_PI = Math.PI * 2;
-const SECTOR_WIDTH = TWO_PI / DOMAIN_ORDER.length;
+export const SECTOR_WIDTH = TWO_PI / DOMAIN_ORDER.length;
+
+/** Distance from the centre of the ring that holds nodes of this depth. */
+export function ringRadius(depth: number): number {
+  return 3.2 + depth * 3.65;
+}
+
+/** Angle (radians, in the x/z plane) of the centre of a domain's sector. */
+export function domainAngle(domain: Domain): number {
+  return -Math.PI / 2 + DOMAIN_ORDER.indexOf(domain) * SECTOR_WIDTH;
+}
 
 /**
  * Places nodes in a deterministic semantic layout.
@@ -41,17 +53,14 @@ export function layoutBeliefMap(map: BeliefMap): BeliefMap {
   const validated = BeliefMapSchema.parse(map);
 
   const nodes = validated.nodes.map((node) => {
-    const domainIndex = DOMAIN_ORDER.indexOf(node.primaryDomain);
-    const sectorCentre = -Math.PI / 2 + domainIndex * SECTOR_WIDTH;
-
     // Stable jitter prevents nodes in one semantic slot from sitting exactly
     // on top of each other, without making their location drift between loads.
     const angleJitter = signedUnitHash(`${node.id}:angle`) * SECTOR_WIDTH * 0.34;
     const radiusJitter = signedUnitHash(`${node.id}:radius`) * 0.55;
     const heightJitter = signedUnitHash(`${node.id}:height`) * 0.42;
 
-    const radius = 3.2 + node.depth * 3.65 + radiusJitter;
-    const angle = sectorCentre + angleJitter;
+    const radius = ringRadius(node.depth) + radiusJitter;
+    const angle = domainAngle(node.primaryDomain) + angleJitter;
 
     return {
       ...node,

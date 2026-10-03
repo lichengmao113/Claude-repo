@@ -34,10 +34,14 @@ import {
   deserializeBeliefMap,
   serializeBeliefMap,
 } from "../lib/serialization";
+import { DOMAIN_STYLE, EDGE_ORDER, EDGE_STYLE, KIND_STYLE } from "../lib/belief-theme";
 import { useBeliefStore, type NewBeliefChain } from "../store/belief-store";
 import { SethChapterIndex, SethReference } from "./SethReference";
 import { SystemArchitecture } from "./SystemArchitecture";
 import { reviewCoverage } from "../lib/system-revision";
+import type { LabelMode } from "./BeliefScene";
+import { QuickEditor } from "./universe/QuickEditor";
+import { LinkBanner, SceneHeading, SceneHint, SceneLegend, SceneTools } from "./universe/UniverseHud";
 
 const BeliefScene = dynamic(() => import("./BeliefScene"), {
   ssr: false,
@@ -51,49 +55,7 @@ const BeliefScene = dynamic(() => import("./BeliefScene"), {
   ),
 });
 
-const DOMAIN_INFO: Record<Domain, { label: string; color: string }> = {
-  self: { label: "自我", color: "#82d8c5" },
-  relationship: { label: "关系", color: "#f0a576" },
-  life: { label: "生命与意义", color: "#9a8cf1" },
-  career: { label: "工作", color: "#6ab2df" },
-  money: { label: "金钱", color: "#e2bf6a" },
-  body: { label: "身体", color: "#df807a" },
-  learning: { label: "学习与创造", color: "#7bc49e" },
-  uncertainty: { label: "不确定性", color: "#a58aca" },
-  creation: { label: "创造", color: "#72c7b0" },
-  meaning: { label: "意义", color: "#9a8cf1" },
-};
-
-const DOMAIN_ORDER = Object.keys(DOMAIN_INFO) as Domain[];
-
-const KIND_LABELS: Record<NodeKind, string> = {
-  value: "价值方向",
-  "resource-core": "资源性核心",
-  "limiting-core": "限制性核心",
-  rule: "条件规则",
-  strategy: "保护策略",
-  "bridge-belief": "桥梁信念",
-  trigger: "触发",
-  "emotion-body": "情绪 / 身体",
-  behavior: "行为",
-  outcome: "结果",
-  evidence: "证据",
-  "source-event": "来源 / 事件",
-  "experiment-practice": "小验证",
-};
-
-const KIND_COLORS: Partial<Record<NodeKind, string>> = {
-  value: "#e2bf6a",
-  "resource-core": "#82d8c5",
-  "limiting-core": "#df807a",
-  rule: "#6ab2df",
-  strategy: "#9a8cf1",
-  "bridge-belief": "#72d6cb",
-  trigger: "#f0a576",
-  "emotion-body": "#d88da7",
-  behavior: "#a58aca",
-  outcome: "#7f9fc4",
-};
+const DOMAIN_ORDER = Object.keys(DOMAIN_STYLE) as Domain[];
 
 const PROVENANCE_LABELS: Record<Provenance, string> = {
   U0: "已核对用户原话",
@@ -107,21 +69,6 @@ const CONFIDENCE_LABELS: Record<Confidence, string> = {
   high: "高置信",
   medium: "中置信",
   low: "低置信",
-};
-
-const EDGE_LABELS: Record<EdgeKind, string> = {
-  "originated-from": "源自",
-  activates: "触发",
-  "leads-to": "导致",
-  supports: "支持",
-  "conflicts-with": "与…冲突",
-  shapes: "塑造",
-  protects: "保护需要",
-  drives: "驱动",
-  reinforces: "强化",
-  challenges: "质疑",
-  reframes: "重构",
-  tests: "验证",
 };
 
 type DialogName = "add" | "import" | "chapters" | undefined;
@@ -159,6 +106,11 @@ function downloadText(name: string, text: string) {
   link.download = name;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+/** Short name for transient UI; sensitive beliefs stay masked like their 3D labels. */
+function screenLabel(node: BeliefNode) {
+  return node.sensitive ? "敏感信念" : node.label.slice(0, 14);
 }
 
 function safeDomId(value: string) {
@@ -284,7 +236,7 @@ function AddBeliefDialog({ onClose }: { onClose: () => void }) {
                   value={form.domain}
                   onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value as Domain }))}
                 >
-                  {DOMAIN_ORDER.map((domain) => <option key={domain} value={domain}>{DOMAIN_INFO[domain].label}</option>)}
+                  {DOMAIN_ORDER.map((domain) => <option key={domain} value={domain}>{DOMAIN_STYLE[domain].label}</option>)}
                 </select>
               </div>
               <label className="consent-row">
@@ -559,11 +511,11 @@ function OutlineView({ nodes, selectedId, onSelect }: { nodes: BeliefNode[]; sel
       <div className="outline-groups">
         {groups.map(([kind, groupNodes]) => (
           <section className="outline-group" key={kind}>
-            <h2>{KIND_LABELS[kind]} · {groupNodes.length}</h2>
+            <h2>{KIND_STYLE[kind].label} · {groupNodes.length}</h2>
             {groupNodes.map((node) => (
               <button key={node.id} className={`outline-node${selectedId === node.id ? " selected" : ""}`} onClick={() => onSelect(node.id)}>
-                <span className="domain-dot" style={{ "--domain-color": KIND_COLORS[node.kind] ?? "#82d8c5" } as React.CSSProperties} />
-                <span><strong>{node.label}</strong><small>{node.sensitive ? "敏感·" : ""}{DOMAIN_INFO[node.primaryDomain].label} · {CONFIDENCE_LABELS[node.confidence]}</small></span>
+                <span className="domain-dot" style={{ "--domain-color": KIND_STYLE[node.kind].color } as React.CSSProperties} />
+                <span><strong>{node.label}</strong><small>{node.sensitive ? "敏感·" : ""}{DOMAIN_STYLE[node.primaryDomain].label} · {CONFIDENCE_LABELS[node.confidence]}</small></span>
                 <span className="provenance-badge">{node.provenance.join("/")}</span>
               </button>
             ))}
@@ -589,6 +541,7 @@ function Inspector({
   const updateNode = useBeliefStore((state) => state.updateNode);
   const archiveNode = useBeliefStore((state) => state.archiveNode);
   const addEdge = useBeliefStore((state) => state.addEdge);
+  const removeEdge = useBeliefStore((state) => state.removeEdge);
   const addCheckIn = useBeliefStore((state) => state.addCheckIn);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<BeliefNode>>(node ?? {});
@@ -634,7 +587,7 @@ function Inspector({
     <div className="inspector-scroll">
       <button className="icon-button mobile-only panel-mobile-close" onClick={onCloseMobile} aria-label="关闭详情面板">×</button>
       <div className="inspector-topline">
-        <span className="tag">{KIND_LABELS[node.kind]}</span>
+        <span className="tag">{KIND_STYLE[node.kind].label}</span>
         <span className="provenance-badge" title={node.provenance.map((item) => PROVENANCE_LABELS[item]).join("；")}>{node.provenance.join("/")}</span>
         <span className={`confidence-badge ${node.confidence}`}>{CONFIDENCE_LABELS[node.confidence]}</span>
       </div>
@@ -643,7 +596,7 @@ function Inspector({
         <div className="form-grid">
           <div className="field full"><label htmlFor="edit-label">短标题</label><input id="edit-label" value={String(draft.label ?? "")} onChange={(event) => setDraft((current) => ({ ...current, label: event.target.value }))} /></div>
           <div className="field full"><label htmlFor="edit-description">信念全文 / 解释</label><textarea id="edit-description" value={String(draft.description ?? "")} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} /></div>
-          <div className="field"><label htmlFor="edit-domain">主要领域</label><select id="edit-domain" value={String(draft.primaryDomain ?? node.primaryDomain)} onChange={(event) => setDraft((current) => ({ ...current, primaryDomain: event.target.value as Domain }))}>{DOMAIN_ORDER.map((domain) => <option key={domain} value={domain}>{DOMAIN_INFO[domain].label}</option>)}</select></div>
+          <div className="field"><label htmlFor="edit-domain">主要领域</label><select id="edit-domain" value={String(draft.primaryDomain ?? node.primaryDomain)} onChange={(event) => setDraft((current) => ({ ...current, primaryDomain: event.target.value as Domain }))}>{DOMAIN_ORDER.map((domain) => <option key={domain} value={domain}>{DOMAIN_STYLE[domain].label}</option>)}</select></div>
           <div className="field"><label htmlFor="edit-status">状态</label><select id="edit-status" value={String(draft.status ?? node.status)} onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as BeliefNode["status"] }))}><option value="active">活跃</option><option value="under-review">待审视</option><option value="emerging">正在形成</option><option value="candidate">候选</option><option value="archived">已归档</option></select></div>
           <div className="field"><label htmlFor="edit-impact">影响 {draft.impact ?? node.impact}/5</label><input id="edit-impact" type="range" min="1" max="5" value={Number(draft.impact ?? node.impact)} onChange={(event) => setDraft((current) => ({ ...current, impact: Number(event.target.value) }))} /></div>
           <div className="field"><label htmlFor="edit-strength">强度 {draft.strength ?? node.strength}/5</label><input id="edit-strength" type="range" min="1" max="5" value={Number(draft.strength ?? node.strength)} onChange={(event) => setDraft((current) => ({ ...current, strength: Number(event.target.value) }))} /></div>
@@ -674,15 +627,23 @@ function Inspector({
             const otherId = edge.source === node.id ? edge.target : edge.source;
             const other = map.nodes.find((candidate) => candidate.id === otherId);
             if (!other) return null;
-            return <button className="relation-item" key={edge.id} onClick={() => select(other.id)}><small>{EDGE_LABELS[edge.kind]}</small><span>{other.label}</span></button>;
+            return (
+              <div className="relation-row" key={edge.id}>
+                <button className="relation-item" onClick={() => select(other.id)} title={edge.source === node.id ? "这个节点指向对方" : "对方指向这个节点"}>
+                  <small style={{ color: EDGE_STYLE[edge.kind].color }}>{edge.source === node.id ? `${EDGE_STYLE[edge.kind].label} →` : `← ${EDGE_STYLE[edge.kind].label}`}</small>
+                  <span>{other.label}</span>
+                </button>
+                <button className="icon-button relation-remove" aria-label={`删除与「${other.label}」的关系`} title="删除这条关系" onClick={() => { removeEdge(edge.id); onToast("关系已删除，可按 ⌘/Ctrl+Z 撤销。"); }}>×</button>
+              </div>
+            );
           })}
           {!relations.length ? <p className="tiny-copy">还没有关系。可以在下方选择另一节点建立连接。</p> : null}
         </div>
         <div className="form-grid" style={{ marginTop: 11 }}>
-          <div className="field"><label htmlFor="relation-kind">关系</label><select id="relation-kind" value={relationKind} onChange={(event) => setRelationKind(event.target.value as EdgeKind)}>{Object.entries(EDGE_LABELS).map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}</select></div>
+          <div className="field"><label htmlFor="relation-kind">关系</label><select id="relation-kind" value={relationKind} onChange={(event) => setRelationKind(event.target.value as EdgeKind)}>{EDGE_ORDER.map((kind) => <option key={kind} value={kind}>{EDGE_STYLE[kind].label}</option>)}</select></div>
           <div className="field"><label htmlFor="relation-target">目标节点</label><select id="relation-target" value={relationTarget} onChange={(event) => setRelationTarget(event.target.value)}><option value="">请选择…</option>{map.nodes.filter((candidate) => candidate.id !== node.id && candidate.status !== "archived").map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}</select></div>
         </div>
-        <button className="soft-button" style={{ marginTop: 8 }} disabled={!relationTarget} onClick={() => { addEdge(node.id, relationTarget, relationKind, EDGE_LABELS[relationKind]); setRelationTarget(""); onToast("关系已建立。"); }}>建立关系</button>
+        <button className="soft-button" style={{ marginTop: 8 }} disabled={!relationTarget} onClick={() => { addEdge(node.id, relationTarget, relationKind, EDGE_STYLE[relationKind].label); setRelationTarget(""); onToast("关系已建立。"); }}>建立关系</button>
       </section>
 
       <section className="inspector-section">
@@ -751,6 +712,7 @@ export function BeliefUniverseApp() {
     setFocusMode,
     toggleBridges,
     setReducedMotion,
+    addEdge,
     undo,
     markBackup,
   } = useBeliefStore();
@@ -759,6 +721,12 @@ export function BeliefUniverseApp() {
   const [webgl, setWebgl] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [labelMode, setLabelMode] = useState<LabelMode>("core");
+  const [resetToken, setResetToken] = useState(0);
+  const [linkSourceId, setLinkSourceId] = useState<string>();
+  const [linkKind, setLinkKind] = useState<EdgeKind>("supports");
+  // Linking always starts from the selected node; selecting anything else ends it.
+  if (linkSourceId && linkSourceId !== selectedId) setLinkSourceId(undefined);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>({ available: false, loggedIn: false, message: "检查中" });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -808,6 +776,47 @@ export function BeliefUniverseApp() {
   const domainCounts = useMemo(() => new Map(DOMAIN_ORDER.map((domain) => [domain, map.nodes.filter((node) => node.status !== "archived" && node.domains.includes(domain)).length])), [map.nodes]);
   const provenanceCounts = useMemo(() => new Map((Object.keys(PROVENANCE_LABELS) as Provenance[]).map((provenance) => [provenance, map.nodes.filter((node) => node.provenance.includes(provenance) && node.status !== "archived").length])), [map.nodes]);
   const reviewed = reviewCoverage(map);
+  const linkSource = linkSourceId ? visibleNodes.find((node) => node.id === linkSourceId) : undefined;
+  const selectedVisible = selectedNode && visibleIds.has(selectedNode.id) ? selectedNode : undefined;
+
+  const selectInScene = (id: string) => {
+    if (!linkSource) {
+      select(id);
+      return;
+    }
+    if (id === linkSource.id) return;
+    const target = map.nodes.find((node) => node.id === id);
+    addEdge(linkSource.id, id, linkKind, EDGE_STYLE[linkKind].label);
+    setLinkSourceId(undefined);
+    notify(`已建立关系：「${screenLabel(linkSource)}」${EDGE_STYLE[linkKind].label} →「${target ? screenLabel(target) : ""}」`);
+  };
+
+  const clearSceneSelection = () => {
+    if (linkSourceId) setLinkSourceId(undefined);
+    else select(undefined);
+  };
+
+  // Esc cancels linking or clears the selection; ⌘/Ctrl+Z undoes the last edit.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (dialog) return;
+      const target = event.target as HTMLElement | null;
+      const typing = Boolean(target?.closest("input, textarea, select, [contenteditable='true']"));
+      if (event.key === "Escape" && !typing) {
+        if (linkSourceId) setLinkSourceId(undefined);
+        else if (viewMode === "3d") select(undefined);
+      }
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {
+        event.preventDefault();
+        if (useBeliefStore.getState().undoStack.length) {
+          undo();
+          notify("已撤销上一步修改。");
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const backup = () => {
     downloadText(`信念宇宙-本机备份-${new Date().toISOString().slice(0, 10)}.json`, serializeBeliefMap(map));
@@ -820,7 +829,7 @@ export function BeliefUniverseApp() {
   }
 
   return (
-    <main className={`belief-app${viewMode === "system" ? " system-mode" : ""}`}>
+    <main className={`belief-app${viewMode === "system" ? " system-mode" : ""}${viewMode === "3d" ? " universe-mode" : ""}`}>
       <header className="topbar">
         <div className="brand"><span className="brand-orbit" aria-hidden="true" /><span className="brand-copy"><strong>信念宇宙</strong><span>Belief Atlas · Local</span></span></div>
         <span className="local-chip">仅此 Mac</span>
@@ -841,7 +850,7 @@ export function BeliefUniverseApp() {
 
             <section className="sidebar-section">
               <div className="section-title"><span>生活领域</span>{domains.length ? <button onClick={clearDomains}>清空</button> : null}</div>
-              <div className="domain-list">{DOMAIN_ORDER.map((domain) => <button key={domain} className={`domain-filter${!domains.length || domains.includes(domain) ? " active" : ""}`} onClick={() => toggleDomain(domain)}><span className="domain-dot" style={{ "--domain-color": DOMAIN_INFO[domain].color } as React.CSSProperties} /><span>{DOMAIN_INFO[domain].label}</span><small>{domainCounts.get(domain) ?? 0}</small></button>)}</div>
+              <div className="domain-list">{DOMAIN_ORDER.map((domain) => <button key={domain} className={`domain-filter${!domains.length || domains.includes(domain) ? " active" : ""}`} onClick={() => toggleDomain(domain)}><span className="domain-dot" style={{ "--domain-color": DOMAIN_STYLE[domain].color } as React.CSSProperties} /><span>{DOMAIN_STYLE[domain].label}</span><small>{domainCounts.get(domain) ?? 0}</small></button>)}</div>
             </section>
 
             <section className="sidebar-section">
@@ -868,16 +877,80 @@ export function BeliefUniverseApp() {
           </div>
         </aside>
 
-        <section className="universe-stage" aria-label="信念宇宙主视图">
-          {viewMode !== "system" ? <><div className="scene-heading"><div className="section-kicker">核心层级网络 · 可修改导航隐喻</div><h1>你的信念宇宙</h1><p>中心 → 核心信念 / 外环 → 规则与表现 / 高度 → 过去·当下·形成中</p></div>
-          <div className="scene-tools"><button className={`scene-tool${focusMode === "neighbors" ? " active" : ""}`} onClick={() => setFocusMode(focusMode === "all" ? "neighbors" : "all")} title="只显示选中节点的相邻关系">◉</button><button className={`scene-tool${showBridges ? " active" : ""}`} onClick={toggleBridges} title="显示或隐藏桥梁信念">≋</button><button className="scene-tool" onClick={() => setDialog("chapters")} title="赛斯章节索引">§</button></div>
-          <div className="timeline-axis">形成中 / 当下 / 来源
-          </div></> : null}
-          {viewMode === "system" ? <SystemArchitecture nodes={visibleNodes} edges={visibleEdges} selectedId={selectedId} onSelect={(id) => { select(id); setInspectorOpen(true); }} /> : viewMode === "3d" && webgl ? <div className="scene-canvas"><BeliefScene nodes={visibleNodes} edges={visibleEdges} selectedId={selectedId} onSelect={(id) => { select(id); setInspectorOpen(true); }} focusMode={focusMode} reducedMotion={reducedMotion} showBridges={showBridges} /></div> : <OutlineView nodes={visibleNodes} selectedId={selectedId} onSelect={(id) => { select(id); setInspectorOpen(true); }} />}
-          {viewMode !== "system" ? <>
-          <div className="scene-legend" aria-label="图例"><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS.value } as React.CSSProperties} />价值</span><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS["resource-core"] } as React.CSSProperties} />资源核心</span><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS["limiting-core"] } as React.CSSProperties} />限制核心</span><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS.rule } as React.CSSProperties} />条件规则</span><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS.strategy } as React.CSSProperties} />保护策略</span><span><i className="legend-shape" style={{ "--domain-color": KIND_COLORS["bridge-belief"] } as React.CSSProperties} />桥梁假设</span></div>
-          <div className="scene-notice">位置不是客观心理测量。节点可修改、可归档，推断和桥梁信念必须保留 I / G 标记。</div>
-          </> : null}
+        <section className={`universe-stage${viewMode === "3d" && webgl ? " is-3d" : ""}`} aria-label="信念宇宙主视图">
+          {viewMode === "system" ? (
+            <SystemArchitecture nodes={visibleNodes} edges={visibleEdges} selectedId={selectedId} onSelect={(id) => { select(id); setInspectorOpen(true); }} />
+          ) : viewMode === "3d" && webgl ? (
+            <>
+              <div className="scene-canvas">
+                <BeliefScene
+                  nodes={visibleNodes}
+                  edges={visibleEdges}
+                  selectedId={selectedId}
+                  onSelect={selectInScene}
+                  onBackgroundClick={clearSceneSelection}
+                  focusMode={focusMode}
+                  labelMode={labelMode}
+                  reducedMotion={reducedMotion}
+                  linkSourceId={linkSource?.id}
+                  resetToken={resetToken}
+                />
+              </div>
+              <SceneHeading mode="3d" />
+              <SceneTools
+                mode="3d"
+                focusMode={focusMode}
+                labelMode={labelMode}
+                showBridges={showBridges}
+                onReset={() => setResetToken((value) => value + 1)}
+                onToggleFocus={() => setFocusMode(focusMode === "all" ? "neighbors" : "all")}
+                onToggleLabels={() => setLabelMode((value) => (value === "all" ? "core" : "all"))}
+                onToggleBridges={toggleBridges}
+                onOpenChapters={() => setDialog("chapters")}
+              />
+              {linkSource ? (
+                <LinkBanner
+                  sourceLabel={screenLabel(linkSource)}
+                  kind={linkKind}
+                  onKindChange={setLinkKind}
+                  onCancel={() => setLinkSourceId(undefined)}
+                />
+              ) : null}
+              {!visibleNodes.length ? (
+                <div className="scene-empty" role="status">没有符合当前搜索或筛选的信念。</div>
+              ) : null}
+              <div className={`scene-dock${selectedVisible ? " has-editor" : ""}`}>
+                <SceneLegend nodes={visibleNodes} edges={visibleEdges} editing={Boolean(selectedVisible)} />
+                {selectedVisible ? (
+                  <QuickEditor
+                    key={selectedVisible.id}
+                    node={selectedVisible}
+                    relationCount={map.edges.filter((edge) => edge.source === selectedVisible.id || edge.target === selectedVisible.id).length}
+                    linking={linkSource?.id === selectedVisible.id}
+                    onStartLink={() => setLinkSourceId((current) => (current === selectedVisible.id ? undefined : selectedVisible.id))}
+                    onOpenDetails={() => setInspectorOpen(true)}
+                    onClose={() => { setLinkSourceId(undefined); select(undefined); }}
+                    onToast={notify}
+                  />
+                ) : (
+                  <SceneHint />
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <SceneHeading mode="2d" />
+              <SceneTools
+                mode="2d"
+                focusMode={focusMode}
+                labelMode={labelMode}
+                showBridges={showBridges}
+                onToggleBridges={toggleBridges}
+                onOpenChapters={() => setDialog("chapters")}
+              />
+              <OutlineView nodes={visibleNodes} selectedId={selectedId} onSelect={(id) => { select(id); setInspectorOpen(true); }} />
+            </>
+          )}
         </section>
 
         <aside className={`inspector${inspectorOpen ? " open" : ""}`} aria-label="节点详情与编辑"><Inspector key={selectedNode?.id ?? "empty"} node={selectedNode} map={map} onCloseMobile={() => setInspectorOpen(false)} onToast={notify} /></aside>
