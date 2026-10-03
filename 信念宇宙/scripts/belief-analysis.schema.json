@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Belief Atlas local analysis result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidateNodes",
+    "candidateEdges",
+    "sourceExcerpts",
+    "warnings",
+    "coverage"
+  ],
+  "properties": {
+    "candidateNodes": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/candidateNode" }
+    },
+    "candidateEdges": {
+      "type": "array",
+      "maxItems": 600,
+      "items": { "$ref": "#/$defs/candidateEdge" }
+    },
+    "sourceExcerpts": {
+      "type": "array",
+      "maxItems": 400,
+      "items": { "$ref": "#/$defs/sourceExcerpt" }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2000 }
+    },
+    "coverage": { "$ref": "#/$defs/coverage" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
+    },
+    "provenance": {
+      "type": "string",
+      "enum": ["U0", "Q", "A", "I", "G"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "self",
+        "relationship",
+        "life",
+        "career",
+        "money",
+        "body",
+        "learning",
+        "uncertainty",
+        "creation",
+        "meaning"
+      ]
+    },
+    "candidateNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "label",
+        "description",
+        "depth",
+        "primaryDomain",
+        "domains",
+        "temporalLayer",
+        "confidence",
+        "confidenceNote",
+        "sensitive",
+        "provenance",
+        "sourceExcerptIds",
+        "status",
+        "tags"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "value",
+            "resource-core",
+            "limiting-core",
+            "rule",
+            "strategy",
+            "bridge-belief",
+            "source-event",
+            "trigger",
+            "emotion-body",
+            "behavior",
+            "outcome",
+            "evidence",
+            "experiment-practice"
+          ]
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "depth": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "primaryDomain": { "$ref": "#/$defs/domain" },
+        "domains": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/domain" }
+        },
+        "temporalLayer": {
+          "type": "string",
+          "enum": ["past", "current", "emerging"]
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "confidenceNote": { "type": "string", "maxLength": 2000 },
+        "sensitive": { "type": "boolean" },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/provenance" }
+        },
+        "sourceExcerptIds": {
+          "type": "array",
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "status": { "type": "string", "const": "candidate" },
+        "tags": {
+          "type": "array",
+          "maxItems": 40,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+        }
+      }
+    },
+    "candidateEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "target",
+        "kind",
+        "label",
+        "bidirectional",
+        "confidence",
+        "sensitive",
+        "provenance",
+        "sourceExcerptIds"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "source": { "$ref": "#/$defs/identifier" },
+        "target": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "supports",
+            "conflicts-with",
+            "shapes",
+            "protects",
+            "drives",
+            "reinforces",
+            "challenges",
+            "reframes",
+            "tests",
+            "originated-from",
+            "activates",
+            "leads-to"
+          ]
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "bidirectional": { "type": "boolean" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "sensitive": { "type": "boolean" },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/provenance" }
+        },
+        "sourceExcerptIds": {
+          "type": "array",
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    },
+    "sourceExcerpt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "conversationId",
+        "conversationTitle",
+        "messageId",
+        "role",
+        "provenance",
+        "confidence",
+        "confidenceNote",
+        "sensitive",
+        "text",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "conversationTitle": { "type": "string", "maxLength": 500 },
+        "messageId": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant", "system", "tool", "unknown"]
+        },
+        "provenance": {
+          "type": "string",
+          "enum": ["Q", "A", "I", "G"]
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "confidenceNote": { "type": "string", "maxLength": 2000 },
+        "sensitive": { "type": "boolean" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 12000 },
+        "createdAt": {
+          "type": ["string", "null"],
+          "maxLength": 80
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conversationCount",
+        "messageCount",
+        "userMessageCount",
+        "assistantMessageCount",
+        "systemMessageCount",
+        "toolMessageCount",
+        "unknownRoleMessageCount",
+        "analyzedMessageCount",
+        "truncated",
+        "notes"
+      ],
+      "properties": {
+        "conversationCount": { "type": "integer", "minimum": 0 },
+        "messageCount": { "type": "integer", "minimum": 0 },
+        "userMessageCount": { "type": "integer", "minimum": 0 },
+        "assistantMessageCount": { "type": "integer", "minimum": 0 },
+        "systemMessageCount": { "type": "integer", "minimum": 0 },
+        "toolMessageCount": { "type": "integer", "minimum": 0 },
+        "unknownRoleMessageCount": { "type": "integer", "minimum": 0 },
+        "analyzedMessageCount": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "notes": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2000 }
+        }
+      }
+    }
+  }
+}

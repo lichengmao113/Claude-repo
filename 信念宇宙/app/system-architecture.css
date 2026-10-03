@@ -1,0 +1,184 @@
+.system-architecture {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  background: #0a0d11;
+  letter-spacing: 0;
+}
+
+.system-architecture * { letter-spacing: 0; }
+.belief-app:has(.system-architecture),
+.app-grid:has(.system-architecture),
+.universe-stage:has(.system-architecture),
+.app-grid:has(.system-architecture) > * { min-width: 0; max-width: 100%; }
+.system-mode .app-grid { grid-template-columns: 218px minmax(0, 1fr) 330px; }
+.system-mode .universe-stage { min-width: 0; height: calc(100dvh - 66px); }
+.system-mode .topbar { letter-spacing: 0; }
+.evidence-origin { display: inline-block; color: var(--mint); font-size: 11px; margin: 0 12px 10px; }
+
+@media (max-width: 1180px) and (min-width: 941px) {
+  .system-mode .app-grid { grid-template-columns: 184px minmax(0, 1fr) 292px; }
+}
+@media (max-width: 940px) {
+  .belief-app .sidebar:not(.open), .belief-app .inspector:not(.open) {
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: none;
+  }
+  .system-mode .app-grid { display: block; }
+  .system-mode .universe-stage { height: calc(100dvh - 110px); }
+}
+
+.architecture-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 23px 26px 16px;
+  flex: 0 0 auto;
+}
+
+.architecture-edition { color: #89989e; font-size: 10px; margin: 0 0 7px; }
+.architecture-heading h2 { font-size: 23px; line-height: 1.25; font-weight: 570; margin: 0; color: #eef0eb; }
+.architecture-count { font-size: 10px; margin: 0; white-space: nowrap; color: #90989d; }
+.architecture-count strong { color: #d8e0df; font-size: 13px; font-weight: 500; font-family: var(--mono); }
+.architecture-count > span { padding: 0 5px; color: #545e64; }
+
+.architecture-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 0 26px 13px; flex: 0 0 auto; }
+.architecture-modes { display: inline-flex; padding: 2px; border: 1px solid #2b353b; border-radius: 5px; background: #10161b; }
+.architecture-modes button { background: transparent; border: 0; border-radius: 3px; padding: 6px 14px; font-size: 11px; line-height: 16px; color: #9ba5aa; }
+.architecture-modes button[aria-pressed="true"] { background: #2b3e3a; color: #bcf0e2; }
+.architecture-toolbar-actions { display: flex; gap: 8px; }
+.architecture-command { padding: 6px 10px; font-size: 11px; line-height: 18px; border-radius: 4px; color: #b6c1c4; background: transparent; border: 1px solid #2a3439; }
+.architecture-command:hover:not(:disabled) { background: #19242a; border-color: #50625f; }
+.architecture-command[aria-expanded="true"] { border-color: #699b8c; color: #b6e6d8; }
+.architecture-boundary { margin: 0; padding: 0 26px 14px; border-bottom: 1px solid #232b30; font-size: 10px; line-height: 1.7; color: #89959b; flex: 0 0 auto; }
+
+.architecture-scroll { min-height: 120px; flex: 1 1 auto; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #354449 #0a0d11; }
+.architecture-scroll { width: 100%; max-width: 100%; min-width: 0; }
+.architecture-scroll.is-overview { overflow-x: hidden; }
+.architecture-overview { padding: 0 25px 18px; min-width: 0; max-width: 100%; }
+.overview-synthesis { margin: 0; padding: 13px 0 15px; color: #d3dedb; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.overview-synthesis > span { display: inline; margin-right: 9px; font-size: 9px; color: #cab68d; }
+.overview-flow { position: relative; isolation: isolate; padding-right: 21px; }
+.overview-connectors { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: visible; }
+.overview-axis, .overview-feedback { fill: none; stroke: #647f80; stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.overview-feedback { stroke: #8daaa6; }
+.overview-feedback-label { position: absolute; right: -6px; top: 66%; writing-mode: vertical-rl; color: #8ea4a0; background: #0a0d11; font-size: 8px; line-height: 13px; padding: 4px 0; }
+.overview-layer { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 72px; padding: 10px 8px 10px 18px; border-top: 1px solid #283237; position: relative; }
+.overview-layer::before { content: ""; position: absolute; width: 5px; height: 5px; left: 4px; top: calc(50% - 2px); border: 1px solid var(--layer-color); border-radius: 50%; background: #0a0d11; }
+.overview-layer-heading { min-width: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 4px 6px; align-items: baseline; }
+.overview-sequence { color: var(--layer-color); font: 9px var(--mono); }
+.overview-layer-heading h3 { margin: 0; color: #dce3df; font-size: 12px; line-height: 18px; font-weight: 570; }
+.overview-qualifier { grid-column: 2; color: #7f9195; font-size: 8px; line-height: 13px; }
+.overview-layer-nodes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 9px; min-width: 0; }
+.overview-node { min-width: 0; width: 100%; background: transparent; border: 0; border-radius: 3px; border-left: 2px solid transparent; padding: 3px 6px; text-align: left; font-size: 11px; line-height: 17px; color: #c5d0cf; overflow-wrap: anywhere; }
+.overview-node > span { display: block; }
+.overview-node:hover { background: #1a262a; color: #f0f3ee; }
+.overview-node.is-selected { border-left-color: var(--layer-color); color: #e2f5ec; background: #233730; }
+.overview-context { margin-top: 8px; padding-right: 29px; border-top: 1px dashed #617379; border-bottom: 1px dashed #35454b; min-height: 63px; }
+.overview-context::before { display: none; }
+.overview-context .overview-sequence { font-size: 14px; }
+.overview-supplemental { margin-top: 13px; font-size: 10px; color: #8b9ba0; }
+.overview-supplemental summary { cursor: pointer; padding: 3px 0 9px; }
+.overview-supplemental summary > span { margin-left: 5px; color: #bdc8c5; font-family: var(--mono); }
+.overview-supplemental > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
+.overview-supplemental-node { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; padding: 8px 0; border: 0; border-bottom: 1px solid #263238; background: transparent; text-align: left; font-size: 11px; line-height: 1.7; color: #a5b5b9; }
+.overview-supplemental-node > span { min-width: 0; overflow-wrap: anywhere; }
+.overview-supplemental-node small { white-space: nowrap; color: #b7ac92; font-size: 8px; }
+.overview-supplemental-node:hover, .overview-supplemental-node.is-selected { color: #bcead9; }
+.architecture-canvas { position: relative; isolation: isolate; }
+.architecture-edges { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+.architecture-edge { fill: none; stroke: #697b86; stroke-width: 1.05; stroke-dasharray: 4 4; opacity: 0.36; transition: opacity 150ms; }
+.architecture-edge.is-connected { stroke: #a7dacd; stroke-width: 1.7; stroke-dasharray: 5 3; opacity: 0.94; }
+.architecture-edge.is-dimmed { opacity: 0.065; }
+
+.architecture-layer { position: absolute; right: 44px; left: 26px; height: 36px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #263036; background: #0a0d11; }
+.architecture-layer-index { color: var(--layer-color); font: 10px var(--mono); opacity: 0.85; }
+.architecture-layer h3 { font-size: 12px; font-weight: 580; margin: 0; color: #d8dfdf; line-height: 1.4; }
+.architecture-layer-count { font: 10px var(--mono); color: #76838a; margin-left: auto; }
+
+.architecture-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 9px;
+  padding: 12px 13px 10px;
+  border: 1px solid #344148;
+  border-left: 2px solid var(--node-color);
+  border-radius: 5px;
+  background: #131a1f;
+  color: #e1e5e3;
+  text-align: left;
+  transition: border-color 140ms, opacity 140ms, background 140ms;
+}
+
+.architecture-node:hover { background: #1b252b; border-color: var(--node-color); z-index: 2; }
+.architecture-node.is-selected { border-color: var(--node-color); background: #20302f; box-shadow: 0 0 0 1px var(--node-color); z-index: 3; }
+.architecture-node.is-dimmed { opacity: 0.32; }
+.architecture-node.is-dimmed:hover, .architecture-node.is-dimmed:focus-visible { opacity: 1; }
+.architecture-node-label { font-size: 13px; line-height: 21px; font-weight: 480; overflow-wrap: anywhere; }
+.architecture-node-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 9px; line-height: 14px; color: #95a2a6; }
+.architecture-evidence { color: #afcec4; }
+.architecture-evidence.is-candidate { color: #c7b58a; }
+.architecture-empty { margin: 0; padding: 48px 26px; color: #97a1a8; font-size: 13px; }
+
+.architecture-relations { flex: 0 0 auto; max-height: 252px; overflow: auto; padding: 13px 26px; border-bottom: 1px solid #2d3d40; background: #10181d; scrollbar-width: thin; }
+.architecture-relations-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 5px; font-size: 11px; line-height: 1.6; }
+.architecture-relations-heading strong { font-weight: 540; color: #b5dfd2; }
+.architecture-relations-heading > span { white-space: nowrap; color: #8c9ca3; }
+.architecture-relations ul { list-style: none; padding: 0; margin: 0; }
+.architecture-relations li { padding: 9px 0; border-bottom: 1px solid #253139; }
+.architecture-relations li:last-child { border: 0; }
+.architecture-relation-pair { display: flex; flex-wrap: wrap; gap: 5px; align-items: baseline; }
+.architecture-relation-pair button { background: none; border: 0; padding: 0; text-align: left; color: #c0d1d6; font-size: 11px; line-height: 1.65; }
+.architecture-relation-pair button:hover { color: #b4ecda; text-decoration: underline; text-underline-offset: 3px; }
+.architecture-relation-pair > span { color: #8dbaae; font-size: 12px; }
+.architecture-relations li p { margin: 4px 0 0; color: #a2aeb3; font-size: 10px; line-height: 1.7; }
+.architecture-relations li p > span { color: #b6a678; white-space: nowrap; }
+.architecture-no-relations { font-size: 11px; color: #929fa7; }
+
+@media (max-width: 700px) {
+  .architecture-heading { padding: 18px 16px 14px; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .architecture-heading h2 { font-size: 21px; }
+  .architecture-count { padding-top: 3px; }
+  .architecture-toolbar { padding-right: 16px; padding-left: 16px; gap: 8px; }
+  .architecture-boundary { padding-right: 16px; padding-left: 16px; }
+  .architecture-command { padding-right: 8px; padding-left: 8px; }
+  .architecture-modes button { padding-right: 11px; padding-left: 11px; }
+  .architecture-relations { padding-right: 16px; padding-left: 16px; }
+  .architecture-overview { padding-right: 15px; padding-left: 15px; }
+  .overview-layer { grid-template-columns: 102px minmax(0, 1fr); gap: 5px; padding-left: 17px; padding-right: 2px; }
+  .overview-layer-heading { grid-template-columns: 14px minmax(0, 1fr); gap: 4px; }
+  .overview-layer-heading h3 { font-size: 11px; }
+  .overview-layer-nodes { gap: 3px 4px; }
+  .overview-node { padding-right: 2px; padding-left: 4px; font-size: 10px; line-height: 17px; }
+  .overview-context { padding-right: 23px; }
+}
+
+@media (max-width: 430px) {
+  .architecture-toolbar { flex-wrap: wrap; }
+  .architecture-toolbar-actions { gap: 5px; }
+  .architecture-command { padding-right: 6px; padding-left: 6px; font-size: 10px; }
+  .overview-layer { grid-template-columns: 81px minmax(0, 1fr); min-height: 90px; padding-left: 14px; gap: 3px; }
+  .overview-layer-heading { grid-template-columns: minmax(0, 1fr); gap: 1px; }
+  .overview-layer-heading h3 { line-height: 17px; }
+  .overview-qualifier { grid-column: 1; font-size: 7px; }
+  .overview-sequence { font-size: 8px; }
+  .overview-layer-nodes { column-gap: 2px; }
+  .overview-supplemental > div { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .architecture-node, .architecture-edge { transition: none; }
+  .architecture-scroll { scroll-behavior: auto; }
+}

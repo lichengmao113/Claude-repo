@@ -1,0 +1,84 @@
+import {
+  BeliefMapSchema,
+  type BeliefMap,
+  type Domain,
+  type TemporalLayer,
+} from "./belief-types";
+
+const DOMAIN_ORDER: readonly Domain[] = [
+  "self",
+  "relationship",
+  "life",
+  "career",
+  "money",
+  "body",
+  "learning",
+  "uncertainty",
+  "creation",
+  "meaning",
+];
+
+const HEIGHT_BY_TIME: Record<TemporalLayer, number> = {
+  past: -6,
+  current: 0,
+  emerging: 6,
+};
+
+const TWO_PI = Math.PI * 2;
+const SECTOR_WIDTH = TWO_PI / DOMAIN_ORDER.length;
+
+/**
+ * Places nodes in a deterministic semantic layout.
+ *
+ * - radial distance encodes depth (core -> rules -> strategies)
+ * - angular sector encodes the primary life domain
+ * - height encodes past/current/emerging
+ *
+ * The function does not mutate the input and does not use a physics simulation,
+ * so the same valid map always receives the same coordinates.
+ */
+export function layoutBeliefMap(map: BeliefMap): BeliefMap {
+  const validated = BeliefMapSchema.parse(map);
+
+  const nodes = validated.nodes.map((node) => {
+    const domainIndex = DOMAIN_ORDER.indexOf(node.primaryDomain);
+    const sectorCentre = -Math.PI / 2 + domainIndex * SECTOR_WIDTH;
+
+    // Stable jitter prevents nodes in one semantic slot from sitting exactly
+    // on top of each other, without making their location drift between loads.
+    const angleJitter = signedUnitHash(`${node.id}:angle`) * SECTOR_WIDTH * 0.34;
+    const radiusJitter = signedUnitHash(`${node.id}:radius`) * 0.55;
+    const heightJitter = signedUnitHash(`${node.id}:height`) * 0.42;
+
+    const radius = 3.2 + node.depth * 3.65 + radiusJitter;
+    const angle = sectorCentre + angleJitter;
+
+    return {
+      ...node,
+      position: {
+        x: roundCoordinate(Math.cos(angle) * radius),
+        y: roundCoordinate(HEIGHT_BY_TIME[node.temporalLayer] + heightJitter),
+        z: roundCoordinate(Math.sin(angle) * radius),
+      },
+    };
+  });
+
+  return BeliefMapSchema.parse({ ...validated, nodes });
+}
+
+function signedUnitHash(value: string): number {
+  return (fnv1a(value) / 0xffffffff) * 2 - 1;
+}
+
+function fnv1a(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function roundCoordinate(value: number): number {
+  return Math.round(value * 10_000) / 10_000;
+}
