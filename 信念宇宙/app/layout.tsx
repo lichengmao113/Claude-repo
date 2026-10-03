@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./system-architecture.css";
+import "./universe.css";
 
 export const metadata: Metadata = {
   title: "信念宇宙 · Belief Atlas",

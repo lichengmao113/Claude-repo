@@ -10,8 +10,10 @@ import type {
   CheckIn,
   Domain,
   EdgeKind,
+  NodeKind,
   SourceExcerpt,
 } from "../lib/belief-types";
+import { EDGE_STYLE, KIND_DEFAULT_DEPTH } from "../lib/belief-theme";
 import { layoutBeliefMap } from "../lib/layout";
 import { initialBeliefMap } from "../lib/seed";
 import { applySystemRevision, REVIEW_MARKER } from "../lib/system-revision";
@@ -86,6 +88,15 @@ export type NewBeliefChain = {
   sensitive: boolean;
 };
 
+export type NewLinkedBelief = {
+  fromId: string;
+  label: string;
+  kind: NodeKind;
+  relation: EdgeKind;
+  /** false: existing → new; true: new → existing. */
+  reverse: boolean;
+};
+
 type BeliefStore = {
   map: BeliefMap;
   hydrated: boolean;
@@ -112,8 +123,10 @@ type BeliefStore = {
   updateNode: (id: string, patch: Partial<BeliefNode>) => void;
   archiveNode: (id: string) => void;
   addEdge: (source: string, target: string, kind: EdgeKind, label: string) => void;
+  removeEdge: (id: string) => void;
   addCheckIn: (nodeId: string, strength: number, activation: number, note?: string) => void;
   addBeliefChain: (input: NewBeliefChain) => Promise<string>;
+  addLinkedBelief: (input: NewLinkedBelief) => Promise<string | undefined>;
   replaceMap: (map: BeliefMap) => void;
   mergeGraph: (
     nodes: BeliefNode[],
@@ -252,6 +265,11 @@ export const useBeliefStore = create<BeliefStore>((set, get) => {
           },
         ],
       })),
+    removeEdge: (id) =>
+      commit((map) => ({
+        ...map,
+        edges: map.edges.filter((edge) => edge.id !== id),
+      })),
     addCheckIn: (nodeId, strength, activation, note) => {
       const checkIn: CheckIn = {
         id: stableId("checkin"),
@@ -355,6 +373,66 @@ export const useBeliefStore = create<BeliefStore>((set, get) => {
       }));
       set({ selectedId: beliefId });
       return beliefId;
+    },
+    addLinkedBelief: async (input) => {
+      const from = get().map.nodes.find((node) => node.id === input.fromId);
+      const text = input.label.trim();
+      if (!from || !text) return undefined;
+      const createdAt = nowIso();
+      const nodeId = stableId("belief");
+      const excerptId = stableId("source-user");
+      const evidenceText = `信念：${text}`;
+      // A new neighbour inherits the sensitivity of the node it grows from.
+      const excerpt: SourceExcerpt = {
+        id: excerptId,
+        role: "user",
+        provenance: "U0",
+        confidence: "high",
+        sensitive: from.sensitive,
+        text: evidenceText,
+        contentHash: await sha256(evidenceText),
+        createdAt,
+      };
+      const node: BeliefNode = {
+        id: nodeId,
+        kind: input.kind,
+        label: text.slice(0, 40),
+        description: text,
+        depth: KIND_DEFAULT_DEPTH[input.kind],
+        primaryDomain: from.primaryDomain,
+        domains: [from.primaryDomain],
+        temporalLayer: from.temporalLayer,
+        impact: 3,
+        strength: 3,
+        confidence: "high",
+        sensitive: from.sensitive,
+        provenance: ["U0"],
+        sourceExcerptIds: [excerptId],
+        status: "active",
+        tags: ["手动记录"],
+        createdAt,
+        updatedAt: createdAt,
+      };
+      const edge: BeliefEdge = {
+        id: stableId("edge"),
+        source: input.reverse ? nodeId : from.id,
+        target: input.reverse ? from.id : nodeId,
+        kind: input.relation,
+        label: EDGE_STYLE[input.relation].label,
+        bidirectional: input.relation === "conflicts-with",
+        confidence: "high",
+        sensitive: from.sensitive,
+        provenance: ["U0"],
+        sourceExcerptIds: [excerptId],
+      };
+      commit((map) => ({
+        ...map,
+        nodes: [...map.nodes, node],
+        edges: [...map.edges, edge],
+        sourceExcerpts: [...map.sourceExcerpts, excerpt],
+      }));
+      set({ selectedId: nodeId });
+      return nodeId;
     },
     replaceMap: (map) => commit(() => snapshot(map)),
     mergeGraph: (nodes, edges, excerpts) =>
